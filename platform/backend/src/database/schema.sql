@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS message_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     client_id INTEGER NOT NULL,
     message TEXT NOT NULL,
-    level TEXT CHECK(level IN ('info', 'warn', 'error', 'debug')),
+    level TEXT CHECK(level IN ('info', 'success', 'warn', 'warning', 'error', 'debug')),
     stream_type TEXT CHECK(stream_type IN ('logs', 'alerts')),
     metadata TEXT, -- JSON string
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

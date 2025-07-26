@@ -31,7 +31,11 @@
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.1.0",
+    "eslint": "^9.32.0",
+    "jest": "^30.0.5",
+    "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   }

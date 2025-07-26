@@ -7,7 +7,7 @@ import { WebSocketService } from './services/websocket';
 
 // Import routes
 import authRoutes from './routes/auth';
-import alertRoutes from './routes/alert';
+import { createAlertRoutes } from './routes/alert';
 import clientRoutes from './routes/clients';
 import healthRoutes from './routes/health';
 
@@ -34,10 +34,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
+// Initialize WebSocket service
+const wsService = new WebSocketService(io);
+
+// Routes (after WebSocket service is created)
 app.use('/health', healthRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/alert', alertRoutes);
+app.use('/api/alert', createAlertRoutes(wsService));
 app.use('/api/clients', clientRoutes);
 
 // Root endpoint
@@ -56,7 +59,7 @@ app.get('/', (req, res) => {
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
@@ -66,8 +69,7 @@ app.use((err: any, req: any, res: any, next: any) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Initialize WebSocket service
-const wsService = new WebSocketService(io);
+// WebSocket service already initialized above
 
 // Cleanup old messages periodically (every hour)
 setInterval(async () => {

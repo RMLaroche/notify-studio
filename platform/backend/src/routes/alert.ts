@@ -2,12 +2,14 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { db } from '../database/database';
+import { WebSocketService } from '../services/websocket';
 
-const router = Router();
+export function createAlertRoutes(wsService: WebSocketService) {
+  const router = Router();
 
 const AlertSchema = z.object({
   message: z.string().min(1).max(10000),
-  level: z.enum(['info', 'warn', 'error', 'debug']).optional().default('info'),
+  level: z.enum(['info', 'success', 'warn', 'warning', 'error', 'debug']).optional().default('info'),
   type: z.enum(['logs', 'alerts']).optional().default('alerts'),
   metadata: z.record(z.string(), z.any()).optional()
 });
@@ -31,8 +33,20 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
       ]
     );
     
-    // TODO: Route message to configured output modules based on routing rules
-    // For now, just log the message
+    // Route message to all connected output modules
+    const notificationPayload = {
+      message,
+      level,
+      type,
+      clientName: client.name,
+      timestamp: new Date().toISOString(),
+      ...(metadata && { metadata })
+    };
+    
+    // Broadcast to all connected modules
+    wsService.broadcastToModules('notification', notificationPayload);
+    
+    // Log for debugging
     console.log(`[${client.name}] [${level}] [${type}] ${message}`);
     if (metadata) {
       console.log('Metadata:', metadata);
@@ -55,4 +69,5 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
   }
 });
 
-export default router;
+  return router;
+}

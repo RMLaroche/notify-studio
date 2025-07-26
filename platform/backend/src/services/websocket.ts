@@ -1,14 +1,16 @@
 import { Server, Socket } from 'socket.io';
 import { verifyToken } from '../utils/auth';
-import { db } from '../database/database';
+import { Database } from '../database/database';
 
 interface ClientSocket extends Socket {
   clientId?: number;
   clientName?: string;
+  moduleType?: string;
+  moduleName?: string;
 }
 
 export class WebSocketService {
-  constructor(private io: Server) {
+  constructor(private io: Server, private database?: Database) {
     this.setupSocketHandlers();
   }
 
@@ -28,7 +30,8 @@ export class WebSocketService {
           }
 
           // Find client by token
-          const client = await db.get(
+          const dbInstance = this.database || (await import('../database/database')).db;
+          const client = await dbInstance.get(
             'SELECT id, name FROM clients WHERE token = ?',
             [token]
           );
@@ -44,7 +47,7 @@ export class WebSocketService {
           socket.clientName = client.name;
 
           // Update last_seen
-          await db.run(
+          await dbInstance.run(
             'UPDATE clients SET last_seen = ? WHERE id = ?',
             [new Date().toISOString(), client.id]
           );
@@ -84,7 +87,8 @@ export class WebSocketService {
           const { message, level, streamType, metadata } = data;
 
           // Store message in history
-          await db.run(
+          const dbInstance = this.database || (await import('../database/database')).db;
+          await dbInstance.run(
             'INSERT INTO message_history (client_id, message, level, stream_type, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?)',
             [
               socket.clientId,
@@ -119,10 +123,52 @@ export class WebSocketService {
       // Handle heartbeat
       socket.on('heartbeat', async () => {
         if (socket.clientId) {
-          await db.run(
+          const dbInstance = this.database || (await import('../database/database')).db;
+          await dbInstance.run(
             'UPDATE clients SET last_seen = ? WHERE id = ?',
             [new Date().toISOString(), socket.clientId]
           );
+        }
+      });
+
+      // Handle module connections (Discord, Email, etc.)
+      socket.on('module-connect', async (data) => {
+        try {
+          const { token, type, name } = data;
+          
+          // Simple token validation for modules (you may want to make this more secure)
+          if (!token || token.length < 6) {
+            socket.emit('error', { message: 'Invalid module token' });
+            socket.disconnect();
+            return;
+          }
+
+          // Set module info
+          socket.moduleType = type;
+          socket.moduleName = name;
+
+          // Join module room for targeted messages
+          socket.join(`module-${type}`);
+          socket.join('modules'); // Join general modules room
+
+          socket.emit('authenticated', {
+            moduleType: type,
+            moduleName: name
+          });
+
+          // Broadcast to dashboard about module connection
+          socket.broadcast.emit('module-status-update', {
+            moduleType: type,
+            moduleName: name,
+            status: 'online',
+            connectedAt: new Date().toISOString()
+          });
+
+          console.log(`Module connected: ${name} (${type})`);
+        } catch (error) {
+          console.error('Module authentication error:', error);
+          socket.emit('error', { message: 'Module authentication failed' });
+          socket.disconnect();
         }
       });
 
@@ -161,9 +207,24 @@ export class WebSocketService {
     this.io.to('dashboard').emit(event, data);
   }
 
+  // Broadcast to all connected modules
+  public broadcastToModules(event: string, data: any): void {
+    this.io.to('modules').emit(event, data);
+  }
+
+  // Send to specific module type
+  public sendToModuleType(moduleType: string, event: string, data: any): void {
+    this.io.to(`module-${moduleType}`).emit(event, data);
+  }
+
   // Get connected clients count
   public async getConnectedClientsCount(): Promise<number> {
     const sockets = await this.io.fetchSockets();
     return sockets.filter(socket => (socket as unknown as ClientSocket).clientId).length;
+  }
+
+  // Authentication helper for tests
+  public authenticateClient(token: string): boolean {
+    return verifyToken(token);
   }
 }
