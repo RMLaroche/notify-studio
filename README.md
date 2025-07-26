@@ -29,10 +29,40 @@ notify-studio/
 
 ### Prerequisites
 
+**Option 1: Docker (Recommended)**
+- Docker 20.10+
+- Docker Compose 2.0+
+
+**Option 2: Local Development**
 - Node.js 18+ and npm
 - Git
 
 ### Installation
+
+#### 🐳 Docker Deployment (Recommended)
+
+1. **Clone and configure**
+   ```bash
+   git clone https://github.com/RMLaroche/notify-studio.git
+   cd notify-studio
+   cp .env.docker.example .env.docker
+   # Edit .env.docker with your configuration
+   ```
+
+2. **Start the platform**
+   ```bash
+   # Production deployment
+   make docker-prod
+   
+   # Or with Discord module
+   make docker-discord
+   ```
+
+3. **Access the application**
+   - Frontend Dashboard: http://localhost:3000
+   - Backend API: http://localhost:3001
+
+#### 💻 Local Development
 
 1. **Clone the repository**
    ```bash
@@ -94,6 +124,7 @@ npm test
 
 ## 📖 Documentation
 
+- [Docker Deployment Guide](./docker/README.md)
 - [CLI Client Documentation](./clients/cli/README.md)
 - [Platform Backend Documentation](./platform/backend/README.md)
 - [Platform Frontend Documentation](./platform/frontend/README.md)

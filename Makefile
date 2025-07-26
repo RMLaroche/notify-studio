@@ -53,3 +53,29 @@ discord-dev: ## Start Discord module in development mode
 	@echo "🤖 Starting Discord module..."
 	@echo "Make sure you have configured modules/discord/.env"
 	cd modules/discord && npm run dev
+
+# Docker commands
+docker-build: ## Build all Docker images
+	docker-compose build
+
+docker-dev: ## Start development environment with Docker
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+docker-prod: ## Start production environment with Docker
+	docker-compose up -d
+
+docker-discord: ## Start with Discord module using Docker
+	docker-compose --profile discord up -d
+
+docker-stop: ## Stop Docker containers
+	docker-compose down
+
+docker-clean: ## Stop containers and remove volumes
+	docker-compose down -v
+	docker image prune -f
+
+docker-logs: ## View Docker logs
+	docker-compose logs -f
+
+docker-status: ## Check Docker container status
+	docker-compose ps

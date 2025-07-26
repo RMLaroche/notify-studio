@@ -1,0 +1,42 @@
+version: '3.8'
+
+# Development override for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  backend:
+    build:
+      target: builder
+    command: npm run dev
+    volumes:
+      - ./platform/backend/src:/app/platform/backend/src
+      - ./shared/src:/app/shared/src
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3001:3001"
+      - "9229:9229"  # Node.js debugging port
+
+  frontend:
+    build:
+      target: builder
+    command: npm start
+    volumes:
+      - ./platform/frontend/src:/app/platform/frontend/src
+      - ./platform/frontend/public:/app/platform/frontend/public
+      - ./shared/src:/app/shared/src
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - FAST_REFRESH=true
+    ports:
+      - "3000:3000"
+
+  discord-module:
+    build:
+      target: builder
+    command: npm run dev
+    volumes:
+      - ./modules/discord/src:/app/modules/discord/src
+      - ./shared/src:/app/shared/src
+    environment:
+      - NODE_ENV=development
